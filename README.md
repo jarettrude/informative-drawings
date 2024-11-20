@@ -1,87 +1,90 @@
-# Informative Drawings: Learning to generate line drawings that convey geometry and semantics
+# Informative Drawings App
 
-### [[project page]](https://carolineec.github.io/informative_drawings/) [[paper]](https://arxiv.org/abs/2203.12691) [[video]](TODO) [[demo]](https://huggingface.co/spaces/carolineec/informativedrawings)
+A Streamlit web application that transforms photographs into beautiful line drawings using AI. This app is based on the research paper ["Learning to generate line drawings that convey geometry and semantics"](https://arxiv.org/abs/2203.12691) by Chan et al.
 
+![Informative Drawings Demo](https://carolineec.github.io/informative_drawings/images/teaser.png)
 
-## Setup
+## Features
 
-### Clone this repository
+- 🎨 Three drawing styles:
+  - Anime: Stylized anime-like line drawings
+  - Contour: Clean contour lines emphasizing shape
+  - Sketch: Natural sketch-like drawings
+- 📸 Support for various image formats (JPG, PNG)
+- 🖥️ Modern, responsive UI with dark mode support
+- ⚡ Real-time image processing
+- 💾 Easy download of generated drawings
 
-```
-git clone https://github.com/carolineec/informative-drawings.git
+## Installation
+
+1. Clone this repository:
+```bash
+git clone https://github.com/jarettrude/informative-drawings.git
 cd informative-drawings
 ```
 
-### Install dependencies
-We provide an environment.yml file listing the dependences and to create a conda environment. Our model uses Pytorch 1.7.1
+2. Create and activate a virtual environment:
+```bash
+# Create virtual environment
+python3.12 -m venv venv
 
-```
-conda env create -f environment.yml
-conda activate drawings
-```
-
-Use the following command to install [CLIP](https://github.com/openai/CLIP) (only needed for training).
-
-```
-conda activate drawings
-pip install git+https://github.com/openai/CLIP.git
+# Activate virtual environment
+# On macOS/Linux:
+source venv/bin/activate
+# On Windows:
+# venv\Scripts\activate
 ```
 
-## Testing
-Pre-trained model is available [here](https://drive.google.com/file/d/1MIdHzecxz-z0uY3ARL_R40DlKcuQxiDk/view?usp=sharing), place the model weights in `checkpoints`.
+3. Install dependencies:
+```bash
+# Upgrade pip to latest version
+pip install --upgrade pip
 
-```
-cd checkpoints
-unzip model.zip
-```
-
-run pre-trained model on images in `--dataroot`. Replace `examples ` with the folder path containing your input images.
-
-```
-python test.py --name anime_style --dataroot examples/test
+# Install requirements
+pip install -r requirements.txt
 ```
 
-Results will be saved to the `results` directory by default. You can change the save location by specifying the file path with `--results_dir`. 
+## Usage
 
-## Training
-
-We provide a pre-trained network for mapping ImageNet features into depth images [here](https://drive.google.com/file/d/1Ov1BNue74Yu-57X2rpdjqZy0o-fnFoly/view?usp=sharing). Place the pre-trained features to depth network in the `./checkpoints/feats2Geom` folder.
-
-```
-cd checkpoints/feats2Geom
-unzip feats2depth.zip
+1. Start the Streamlit app:
+```bash
+streamlit run app.py
 ```
 
-To train a model with name `myexperiment` from scratch use the following command.
+2. Open your web browser and navigate to the URL shown in the terminal (typically http://localhost:8501)
 
+3. Upload an image and select your preferred drawing style
+
+4. Click "Generate Drawing" to create your line drawing
+
+5. Download the result using the "Download Drawing" button
+
+## Requirements
+
+- Python 3.8+
+- streamlit==1.32.0
+- torch==2.5.1
+- torchvision==0.20.1
+- pillow>=7.1.0,<11.0.0
+- psutil>=6.1.0
+
+## Credits
+
+This application is built upon the research work:
+
+```bibtex
+@article{chan2022drawings,
+    title={Learning to generate line drawings that convey geometry and semantics},
+    author={Chan, Caroline and Durand, Fredo and Isola, Phillip},
+    booktitle={CVPR},
+    year={2022}
+}
 ```
-python train.py --name myexperiment \
---dataroot examples/train/photos \
---depthroot examples/train/depthmaps \
---root2 examples/train/drawings \
---no_flip
-```
-Replace the example data `examples/train/photos`, `examples/train/depthmaps`, and `examples/train/drawings` with the paths to the dataset of photographs, depth maps, and line drawings respectively. Corresponding images and depth maps in the file paths specified by `--dataroot` and `--depthroot` should have the same file names. You will also need to specify a path to an unaligned dataset of line drawings with `--root2`. A small example of training data is provided in `examples/train`.
 
-Because the model can start making grayscale photos after some training, it is recommended to save model checkpoints frequently by adding the flag `--save_epoch_freq 1`.
+- Original Project: [carolineec/informative-drawings](https://github.com/carolineec/informative-drawings)
+- [Project Page](https://carolineec.github.io/informative_drawings/)
+- [Research Paper](https://arxiv.org/abs/2203.12691)
 
-### Depth Maps
+## License
 
-For training, geometry supervision requires depth maps for the dataset of photographs. To produce psuedo-ground truth depth maps we rely on a pretrained model from [Boosting Monocular Depth Estimation Models to High-Resolution via Content-Adaptive Multi-Resolution Merging](http://yaksoy.github.io/highresdepth/).
-
-## Citation
-
-If you find this work useful please use the following citation:
-
-```
- @article{chan2022drawings,
-	      title={Learning to generate line drawings that convey geometry and semantics},
-	      author={Chan, Caroline and Durand, Fredo and Isola, Phillip},
-	      booktitle={CVPR},
-	      year={2022}
-	      }
-```
-
-## Acknowledgements
-
-Model code adapted from [pix2pixHD](https://github.com/NVIDIA/pix2pixHD) and [pytorch-CycleGAN-and-pix2pix](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix)
+This project is licensed under the terms of the original informative-drawings repository license.
