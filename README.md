@@ -1,19 +1,16 @@
 # Informative Drawings App
 
-A Streamlit web application that transforms photographs into beautiful line drawings using AI. This app is based on the research paper ["Learning to generate line drawings that convey geometry and semantics"](https://arxiv.org/abs/2203.12691) by Chan et al.
+A Gradio web application that transforms photographs into beautiful line drawings using AI. This app is based on the research paper ["Learning to generate line drawings that convey geometry and semantics"](https://arxiv.org/abs/2203.12691) by Chan et al.
 
 ![Informative Drawings Demo](https://carolineec.github.io/informative_drawings/images/teaser.png)
 
-## Features
+## Features 
 
-- 🎨 Three drawing styles:
-  - Anime: Stylized anime-like line drawings
-  - Contour: Clean contour lines emphasizing shape
-  - Sketch: Natural sketch-like drawings
-- 📸 Support for various image formats (JPG, PNG)
-- 🖥️ Modern, responsive UI with dark mode support
-- ⚡ Real-time image processing
-- 💾 Easy download of generated drawings
+-  Three unique drawing styles: anime, contour, and sketch
+-  Fast processing with GPU/MPS acceleration when available
+-  Modern, intuitive Gradio interface
+-  Responsive design that works on desktop and mobile
+-  Memory-optimized for efficient processing
 
 ## Installation
 
@@ -44,31 +41,29 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-## Usage
+## Usage 
 
-1. Start the Streamlit app:
+1. Start the application:
 ```bash
-streamlit run app.py
+python app.py
 ```
 
-2. Open your web browser and navigate to the URL shown in the terminal (typically http://localhost:8501)
+2. Open your web browser to the URL shown in the terminal (typically http://localhost:7860)
 
 3. Upload an image and select your preferred drawing style
 
-4. Click "Generate Drawing" to create your line drawing
+4. Click "Submit" to generate your drawing
 
 5. Download the result using the "Download Drawing" button
 
-## Requirements
+## Requirements 
 
-- Python 3.8+
-- streamlit==1.32.0
-- torch==2.5.1
-- torchvision==0.20.1
-- pillow>=7.1.0,<11.0.0
-- psutil>=6.1.0
+- Python 3.12.7
+- PyTorch 2.5.1
+- Gradio 5.6.0
+- Other dependencies listed in `requirements.txt`
 
-## Credits
+## Credits 
 
 This application is built upon the research work:
 
@@ -85,6 +80,6 @@ This application is built upon the research work:
 - [Project Page](https://carolineec.github.io/informative_drawings/)
 - [Research Paper](https://arxiv.org/abs/2203.12691)
 
-## License
+## License 
 
 This project is licensed under the terms of the original informative-drawings repository license.

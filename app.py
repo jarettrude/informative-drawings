@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
-import streamlit as st
+import gradio as gr
 from PIL import Image
 import torchvision.transforms as transforms
 import gc
@@ -12,7 +12,6 @@ from typing import Optional, Tuple
 import psutil
 import warnings
 from functools import lru_cache
-import io
 
 # Configure logging
 logging.basicConfig(
@@ -29,198 +28,16 @@ MEMORY_THRESHOLD = 0.9  # 90% memory usage threshold
 MAX_IMAGE_SIZE = 1024
 BATCH_SIZE = 1
 
-# Custom CSS to improve layout
-CUSTOM_CSS = """
-<style>
-    /* Modern color scheme and base styles */
-    :root {
-        --primary-color: #4F46E5;
-        --secondary-color: #7C3AED;
-        --border-radius: 0.5rem;
-        --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    }
-
-    /* Light mode colors */
-    [data-theme="light"] {
-        --background-color: #F9FAFB;
-        --text-color: #1F2937;
-        --surface-color: #FFFFFF;
-        --border-color: #E5E7EB;
-        --hover-color: #F3F4F6;
-    }
-
-    /* Dark mode colors */
-    [data-theme="dark"] {
-        --background-color: #111827;
-        --text-color: #F9FAFB;
-        --surface-color: #1F2937;
-        --border-color: #374151;
-        --hover-color: #374151;
-        --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
-    }
-
-    /* Global styles */
-    .stApp {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    }
-
-    /* Container styles */
-    .main-container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 1rem;
-        background: var(--surface-color);
-        border-radius: var(--border-radius);
-        box-shadow: var(--shadow);
-    }
-
-    /* Header styles */
-    .stTitle {
-        color: var(--text-color);
-        font-weight: 700;
-        font-size: 2rem;
-        margin-bottom: 1rem;
-    }
-
-    /* Section headers */
-    [data-testid="stMarkdown"] h3 {
-        margin-top: 0;
-        margin-bottom: 1rem;
-        color: var(--text-color);
-    }
-
-    /* Column layout */
-    [data-testid="column"] {
-        background: var(--surface-color);
-        padding: 1rem;
-        border-radius: var(--border-radius);
-        box-shadow: var(--shadow);
-        margin: 0.5rem;
-        display: flex !important;
-        flex-direction: column !important;
-    }
-
-    /* File uploader */
-    .stFileUploader {
-        margin-bottom: 1rem;
-        padding: 1rem;
-        border-radius: var(--border-radius);
-        border: 2px dashed var(--border-color);
-        background: var(--surface-color);
-    }
-
-    .stFileUploader:hover {
-        border-color: var(--primary-color);
-        background: var(--hover-color);
-    }
-
-    /* Radio buttons */
-    .stRadio {
-        margin: 1rem 0;
-    }
-
-    .stRadio > div {
-        display: flex;
-        gap: 1rem;
-        flex-wrap: wrap;
-    }
-
-    .stRadio label {
-        background: var(--surface-color);
-        padding: 0.5rem 1rem;
-        border-radius: var(--border-radius);
-        border: 1px solid var(--border-color);
-        cursor: pointer;
-        transition: all 0.2s;
-        color: var(--text-color);
-    }
-
-    .stRadio label:hover {
-        border-color: var(--primary-color);
-        background: var(--hover-color);
-    }
-
-    /* Button styles */
-    .stButton > button,
-    .stDownloadButton > button {
-        background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
-        color: white;
-        border: none;
-        padding: 0.75rem 1.5rem;
-        border-radius: var(--border-radius);
-        font-weight: 500;
-        transition: transform 0.2s, box-shadow 0.2s;
-        margin-top: 0.5rem;
-        width: 100%;
-    }
-
-    .stButton > button:hover,
-    .stDownloadButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: var(--shadow);
-    }
-
-    /* Dark mode specific overrides */
-    [data-theme="dark"] .stButton > button,
-    [data-theme="dark"] .stDownloadButton > button {
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-    }
-
-    /* Images */
-    .element-container div[data-testid="stImage"] {
-        max-height: 50vh;
-        overflow: hidden;
-    }
-
-    .element-container div[data-testid="stImage"] img {
-        max-height: 50vh;
-        width: 100%;
-        object-fit: contain;
-        border-radius: var(--border-radius);
-    }
-
-    /* Info messages */
-    .stAlert {
-        background: var(--surface-color);
-        border-radius: var(--border-radius);
-        border-left: 4px solid var(--primary-color);
-        padding: 1rem;
-        margin: 1rem 0;
-        color: var(--text-color);
-    }
-
-    /* Loading spinner */
-    .stSpinner > div {
-        border-color: var(--primary-color);
-    }
-
-    /* Description text */
-    .stMarkdown {
-        color: var(--text-color);
-        line-height: 1.6;
-        margin-bottom: 1rem;
-    }
-
-    /* Image captions */
-    .stImage caption {
-        color: var(--text-color);
-    }
-
-    /* Dark mode specific overrides */
-    [data-theme="dark"] .stButton > button,
-    [data-theme="dark"] .stDownloadButton > button {
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-    }
-
-    [data-theme="dark"] .stFileUploader {
-        border-color: var(--border-color);
-    }
-</style>
-"""
-
 def get_device() -> torch.device:
     """
     Determine and configure the appropriate device for model execution.
+    
+    This function checks for CUDA (GPU) availability, then Apple Silicon MPS,
+    and falls back to CPU if neither is available. It also configures device-specific
+    settings for optimal performance.
+    
+    Returns:
+        torch.device: The selected computation device (cuda, mps, or cpu)
     """
     if torch.cuda.is_available():
         device = torch.device('cuda')
@@ -241,7 +58,12 @@ def get_device() -> torch.device:
 device = get_device()
 
 def clear_memory() -> None:
-    """Clear memory based on device type."""
+    """
+    Clear memory based on device type.
+    
+    This function performs garbage collection and device-specific memory cleanup
+    operations for CUDA and MPS devices.
+    """
     gc.collect()
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
@@ -250,7 +72,12 @@ def clear_memory() -> None:
         torch.mps.empty_cache()
 
 def check_memory() -> float:
-    """Monitor system memory usage and trigger cleanup if necessary."""
+    """
+    Monitor system memory usage and trigger cleanup if necessary.
+    
+    Returns:
+        float: Current memory usage percentage
+    """
     memory = psutil.virtual_memory()
     if memory.percent > MEMORY_THRESHOLD * 100:
         logger.warning(f"High memory usage detected: {memory.percent}%")
@@ -260,7 +87,15 @@ def check_memory() -> float:
 norm_layer = nn.InstanceNorm2d
 
 class ResidualBlock(nn.Module):
-    """Residual block for the generator network."""
+    """
+    Residual block for the generator network.
+    
+    This block implements a residual connection with two convolutional layers,
+    instance normalization, and ReLU activation.
+    
+    Args:
+        in_features (int): Number of input channels
+    """
     def __init__(self, in_features: int):
         super(ResidualBlock, self).__init__()
         self.conv_block = nn.Sequential(
@@ -274,10 +109,30 @@ class ResidualBlock(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass of the residual block.
+        
+        Args:
+            x (torch.Tensor): Input tensor
+            
+        Returns:
+            torch.Tensor: Output tensor with residual connection
+        """
         return x + self.conv_block(x)
 
 class Generator(nn.Module):
-    """Generator network for converting images to drawings."""
+    """
+    Generator network for converting images to drawings.
+    
+    This network implements a U-Net like architecture with residual blocks
+    and skip connections for better feature preservation.
+    
+    Args:
+        input_nc (int): Number of input channels (typically 3 for RGB)
+        output_nc (int): Number of output channels (typically 1 for grayscale drawings)
+        n_residual_blocks (int, optional): Number of residual blocks. Defaults to 9.
+        sigmoid (bool, optional): Whether to use sigmoid activation in the output. Defaults to True.
+    """
     def __init__(self, input_nc: int, output_nc: int, n_residual_blocks: int = 9, sigmoid: bool = True):
         super(Generator, self).__init__()
         
@@ -288,7 +143,7 @@ class Generator(nn.Module):
             nn.ReLU(inplace=True)
         )
 
-        # Downsampling
+        # Downsampling with memory optimization
         in_features = 64
         model1 = []
         for _ in range(2):
@@ -301,10 +156,10 @@ class Generator(nn.Module):
             in_features = out_features
         self.model1 = nn.Sequential(*model1)
 
-        # Residual blocks
+        # Residual blocks with memory optimization
         self.model2 = nn.ModuleList([ResidualBlock(in_features) for _ in range(n_residual_blocks)])
 
-        # Upsampling
+        # Upsampling with memory optimization
         model3 = []
         for _ in range(2):
             out_features = in_features // 2
@@ -325,6 +180,18 @@ class Generator(nn.Module):
         self.model4 = nn.Sequential(*model4)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass of the generator.
+        
+        Args:
+            x (torch.Tensor): Input tensor of shape (batch_size, channels, height, width)
+            
+        Returns:
+            torch.Tensor: Output tensor of shape (batch_size, output_nc, height, width)
+            
+        Raises:
+            MemoryError: If system memory usage is too high
+        """
         if check_memory() > MEMORY_THRESHOLD * 100:
             raise MemoryError("System memory usage too high")
             
@@ -337,7 +204,12 @@ class Generator(nn.Module):
         return self.model4(x)
 
 class ModelManager:
-    """Singleton class for managing model instances and their lifecycle."""
+    """
+    Singleton class for managing model instances and their lifecycle.
+    
+    This class handles model loading, caching, and cleanup operations.
+    It implements the singleton pattern to ensure only one instance exists.
+    """
     _instance = None
     
     def __new__(cls):
@@ -357,13 +229,30 @@ class ModelManager:
             
     @lru_cache(maxsize=32)
     def get_model(self, style: str) -> Optional[nn.Module]:
-        """Get a model instance for the specified style."""
+        """
+        Get a model instance for the specified style, loading it if necessary.
+        
+        Args:
+            style (str): The style identifier for the model
+            
+        Returns:
+            Optional[nn.Module]: The loaded model or None if not available
+        """
         if style not in self.models:
             self.load_model(style)
         return self.models.get(style)
         
     def load_model(self, style: str) -> None:
-        """Load a model for the specified style."""
+        """
+        Load a model for the specified style.
+        
+        Args:
+            style (str): The style identifier for the model to load
+            
+        Raises:
+            FileNotFoundError: If the model file doesn't exist
+            Exception: For other loading errors
+        """
         try:
             model = Generator(3, 1, 3).to(device)
             model_path = os.path.join("models", f"{style}.pth")
@@ -371,6 +260,7 @@ class ModelManager:
             if not os.path.exists(model_path):
                 raise FileNotFoundError(f"Model file {model_path} not found")
             
+            # Load state dict with device handling
             state_dict = torch.load(model_path, map_location='cpu', weights_only=True)
             model.load_state_dict(state_dict)
             model = model.to(device)
@@ -384,7 +274,12 @@ class ModelManager:
             raise
             
     def cleanup(self) -> None:
-        """Clean up all loaded models and free memory."""
+        """
+        Clean up all loaded models and free memory.
+        
+        This method ensures proper resource cleanup by moving models to CPU
+        and clearing GPU memory if applicable.
+        """
         try:
             for model_name in list(self.models.keys()):
                 if self.models[model_name] is not None:
@@ -396,35 +291,60 @@ class ModelManager:
         except Exception as e:
             logger.error(f"Error during cleanup: {str(e)}")
 
-def process_image(input_img: Image.Image) -> Image.Image:
-    """Process and optimize an input image for model inference."""
+def process_image(input_img: str) -> Image.Image:
+    """
+    Process and optimize an input image for model inference.
+    
+    Args:
+        input_img (str): Path to the input image file
+        
+    Returns:
+        Image.Image: Processed PIL Image
+        
+    Raises:
+        Exception: If image processing fails
+    """
     try:
-        # Convert to RGB if necessary
-        if input_img.mode != 'RGB':
-            input_img = input_img.convert('RGB')
-            
-        # Optimize image size
-        if max(input_img.size) > MAX_IMAGE_SIZE:
-            ratio = MAX_IMAGE_SIZE / max(input_img.size)
-            new_size = tuple(int(dim * ratio) for dim in input_img.size)
-            input_img = input_img.resize(new_size, Image.Resampling.LANCZOS)
-            
-        return input_img
+        with Image.open(input_img) as img:
+            # Convert to RGB if necessary
+            if img.mode != 'RGB':
+                img = img.convert('RGB')
+                
+            # Optimize image size
+            if max(img.size) > MAX_IMAGE_SIZE:
+                ratio = MAX_IMAGE_SIZE / max(img.size)
+                new_size = tuple(int(dim * ratio) for dim in img.size)
+                img = img.resize(new_size, Image.Resampling.LANCZOS)
+                
+            # Return a copy of the processed image
+            return img.copy()
     except Exception as e:
         logger.error(f"Error processing image: {str(e)}")
         raise
 
 model_manager = ModelManager()
 
-def predict(input_img: Image.Image, style: str) -> Image.Image:
-    """Generate a drawing from an input image using the specified style."""
+def predict(input_img: str, ver: str) -> Image.Image:
+    """
+    Generate a drawing from an input image using the specified style.
+    
+    Args:
+        input_img (str): Path to the input image file
+        ver (str): Style version to use ('anime', 'contour', or 'sketch')
+        
+    Returns:
+        Image.Image: Generated drawing as a PIL Image
+        
+    Raises:
+        gr.Error: If prediction fails
+    """
     try:
         check_memory()
         
         # Get model (cached)
-        model = model_manager.get_model(style)
+        model = model_manager.get_model(ver)
         if model is None:
-            raise ValueError(f"Model {style} not available")
+            raise ValueError(f"Model {ver} not available")
             
         # Process image
         input_img = process_image(input_img)
@@ -433,6 +353,7 @@ def predict(input_img: Image.Image, style: str) -> Image.Image:
         # Generate drawing
         with torch.no_grad():
             drawing = model(input_tensor)[0]
+            # Move result to CPU before detaching
             if device.type in ['cuda', 'mps']:
                 drawing = drawing.cpu()
             drawing = drawing.detach()
@@ -448,113 +369,57 @@ def predict(input_img: Image.Image, style: str) -> Image.Image:
         
     except Exception as e:
         logger.error(f"Error during prediction: {str(e)}")
-        st.error(f"An error occurred: {str(e)}")
-        return None
+        raise gr.Error(f"An error occurred: {str(e)}")
 
 # Register cleanup
 atexit.register(model_manager.cleanup)
 
-def main():
+def main() -> None:
     """
-    Main entry point for the Streamlit interface.
+    Main entry point for the Gradio interface.
+    
+    This function sets up the Gradio interface configuration, initializes
+    the model manager and launches the interface. It also handles any
+    exceptions that may occur during interface launch and cleanup.
+    
+    Returns:
+        None
     """
     try:
-        st.set_page_config(
-            page_title="Informative Drawings",
-            page_icon="✏️",
-            layout="centered",
-            initial_sidebar_state="collapsed",
-            menu_items={
-                'Get Help': None,
-                'Report a bug': None,
-                'About': None
-            }
-        )
-        
-        # Inject custom CSS
-        st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
-        
-        # Main title and description
-        st.title("✏️ Informative Drawings")
-        st.markdown(f"""
-        Transform your images into beautiful line drawings using AI. 
-        Currently running on: **{device}**
-        """)
-        
-        # Initialize models
-        with st.spinner("Loading models..."):
-            for style in ['anime', 'contour', 'sketch']:
-                try:
-                    model_manager.load_model(style)
-                except Exception as e:
-                    st.error(f"Failed to load {style} model: {str(e)}")
-                    return
+        # Initialize model manager
+        model_manager.load_model('anime')
+        model_manager.load_model('contour')
+        model_manager.load_model('sketch')
 
-        # Create main containers
-        input_col, output_col = st.columns([1, 1])
-        
-        # Input section
-        with input_col:
-            st.markdown("### 📸 Input Image")
-            uploaded_file = st.file_uploader(
-                "Choose an image to transform",
-                type=["jpg", "jpeg", "png"],
-                help="Upload a JPG or PNG image"
+        # Gradio interface configuration
+        title = "Informative Drawings"
+        description = f"Generate line drawings from images using three different styles. Running on: {device}"
+
+        iface = gr.Interface(
+            fn=predict,
+            inputs=[
+                gr.Image(type='filepath'),
+                gr.Radio(['anime', 'contour', 'sketch'], type="value", label='Style')
+            ],
+            outputs=gr.Image(type="pil", format="png"),
+            title=title,
+            description=description,
+            flagging_mode="never",
+        )
+
+        try:
+            iface.launch(
+                show_error=True,
+                share=False,
+                server_port=None  # Let Gradio choose an available port
             )
-            
-            # Style selection
-            style = st.radio(
-                "🎨 Select Drawing Style",
-                ['anime', 'contour', 'sketch'],
-                horizontal=True,
-                help="Choose the style for your drawing"
-            )
-            
-            if uploaded_file is not None:
-                try:
-                    input_image = Image.open(uploaded_file)
-                    st.image(
-                        input_image,
-                        caption="Original Image",
-                        use_column_width=True,
-                        clamp=True
-                    )
-                    
-                    # Generate button
-                    if st.button("🎨 Generate Drawing", type="primary", use_container_width=True):
-                        # Output section
-                        with output_col:
-                            st.markdown("### 🖼️ Generated Drawing")
-                            with st.spinner("🎨 Creating your drawing..."):
-                                result = predict(input_image, style)
-                                if result is not None:
-                                    st.image(
-                                        result,
-                                        caption=f"{style.title()} Style Drawing",
-                                        use_column_width=True,
-                                        clamp=True
-                                    )
-                                    
-                                    # Download button
-                                    buf = io.BytesIO()
-                                    result.save(buf, format='PNG')
-                                    st.download_button(
-                                        label="⬇️ Download Drawing",
-                                        data=buf.getvalue(),
-                                        file_name=f"drawing_{style}.png",
-                                        mime="image/png",
-                                        use_container_width=True
-                                    )
-                except Exception as e:
-                    st.error(f"Error processing image: {str(e)}")
-            else:
-                with output_col:
-                    st.markdown("### 🖼️ Generated Drawing")
-                    st.info("Upload an image to get started!")
-        
+        except Exception as e:
+            logger.error(f"Error launching interface: {str(e)}")
+        finally:
+            model_manager.cleanup()
     except Exception as e:
-        st.error(f"An error occurred: {str(e)}")
         logger.error(f"Error in main: {str(e)}")
+        raise
 
 if __name__ == "__main__":
     main()
