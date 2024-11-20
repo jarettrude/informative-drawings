@@ -2,8 +2,6 @@
 
 A Gradio web application that transforms photographs into beautiful line drawings using AI. This app is based on the research paper ["Learning to generate line drawings that convey geometry and semantics"](https://arxiv.org/abs/2203.12691) by Chan et al.
 
-![Informative Drawings Demo](https://carolineec.github.io/informative_drawings/images/teaser.png)
-
 ## Features 
 
 -  Three unique drawing styles: anime, contour, and sketch
